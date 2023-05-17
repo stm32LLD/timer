@@ -1,0 +1,144 @@
+// Copyright (c) 2023 Ziga Miklosic
+// All Rights Reserved
+////////////////////////////////////////////////////////////////////////////////
+/**
+*@file      timer_cfg.h
+*@brief     Configuration for Timer LL Driver based on STM32 HAL library
+*@author    Ziga Miklosic
+*@email     ziga.miklosic@gmail.si
+*@date      25.04.2023
+*@version   V0.1.0
+*/
+////////////////////////////////////////////////////////////////////////////////
+/**
+*@addtogroup TIMER_CFG_API
+* @{ <!-- BEGIN GROUP -->
+*
+*/
+////////////////////////////////////////////////////////////////////////////////
+
+#ifndef __TIMER_CFG_H
+#define __TIMER_CFG_H
+
+////////////////////////////////////////////////////////////////////////////////
+// Includes
+////////////////////////////////////////////////////////////////////////////////
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+// USER INCLUDE BEGIN...
+
+#include "stm32g4xx_hal.h"
+#include "config/proj_cfg.h"
+
+// USER INCLUDE END...
+
+////////////////////////////////////////////////////////////////////////////////
+// Definitions
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ *  Enable/Disable assertions
+ */
+#define TIMER_CFG_ASSERT_EN                       ( 1 )
+
+// USER CODE END...
+
+// Disable asserts in releases
+#ifndef DEBUG
+    #undef TIMER_CFG_ASSERT_EN
+    #define TIMER_CFG_ASSERT_EN 0
+#endif
+
+/**
+ *  Assert definition
+ */
+#if ( 1 == TIMER_CFG_ASSERT_EN )
+    // USER CODE BEGIN...
+    #define TIMER_ASSERT(x)                       PROJ_CFG_ASSERT(x)
+    // USER CODE END...
+#else
+    #define TIMER_ASSERT(x)                       { ; }
+#endif
+
+/**
+ *  Timer instances
+ *
+ *  @note   Must start with enumeration of 0!
+ */
+typedef enum
+{
+    // USER CODE BEGIN...
+
+    eTIM2_RTOS = 0,         /**<RTOS diagnostics timer */
+
+
+    // USER CODE END...
+
+    eTIM_INST_NUM_OF,       /**<Number of all timer instances */
+
+} timer_inst_t;
+
+/**
+ *  Timer channels
+ *
+ *  @note   Must start with enumeration of 0!
+ */
+typedef enum
+{
+    // USER CODE BEGIN...
+
+
+    // USER CODE END...
+
+    eTIM_CH_NUM_OF,       /**<Number of all timer instances */
+
+} timer_ch_t;
+
+/**
+ *  Timer profile
+ */
+typedef enum
+{
+    eTIM_PROFILE_FREERUNNING = 0,   /**<Free-running timer */
+    eTIM_PROFILE_STOPWATCH,         /**<Stopwatch timer profile */
+    eTIM_PROFILE_PWM_OUT,           /**<PWM generation timer profile */
+    eTIM_PROFILE_PWM_IN,            /**<PWM signal decoding/reading timer profile */
+
+    eTIM_PROFILE_NUM_OF,            /**<Number of all timer profiles */
+} tim_profile_t;
+
+/**
+ *  Based on timer profile periphery shall be configured...
+ *
+ *  NOTE: For now only freerunning timer is supported!
+ */
+
+/**
+ *  Timer configuration structure
+ */
+typedef struct
+{
+    TIM_TypeDef *       p_instance;     /**<TIM instance */
+    uint32_t            mode;           /**<Timer counter mode */
+    uint32_t            psc;            /**<Clock prescaller */
+    uint32_t            per;            /**<Period */
+    uint32_t            irq_prio;       /**<Interrupt priority */
+    IRQn_Type           irq_num;        /**<Interrupt number */
+    bool                start;          /**<Start timer at init */
+} tim_inst_cfg_t;
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Functions
+////////////////////////////////////////////////////////////////////////////////
+tim_inst_cfg_t * timer_cfg_get_inst(const timer_inst_t tim_inst);
+
+#endif // __TIMER_CFG_H
+
+////////////////////////////////////////////////////////////////////////////////
+/**
+* @} <!-- END GROUP -->
+*/
+////////////////////////////////////////////////////////////////////////////////
