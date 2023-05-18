@@ -793,10 +793,10 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 
     // Input clock is 150 MHz
     // Frequency times 2 as it is up/down counter
-    const uint32_t period = (uint32_t)(( 150e6 / 31 ) / ( 2 * p_cfg->freq ));
+    const uint32_t period = (uint32_t)(( 150e6 / 1 ) / ( 2 * p_cfg->freq ));
 
     gh_tim1.Instance                  = TIM1;
-    gh_tim1.Init.Prescaler            = 30;
+    gh_tim1.Init.Prescaler            = 0;
     gh_tim1.Init.CounterMode          = TIM_COUNTERMODE_CENTERALIGNED1;
     gh_tim1.Init.Period               = period;
     gh_tim1.Init.ClockDivision        = TIM_CLOCKDIVISION_DIV2;
