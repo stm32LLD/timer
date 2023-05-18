@@ -712,48 +712,64 @@ static TIM_HandleTypeDef gh_tim1 = {0};
 
 
 
+#include "config/pin_mapper.h"
 
 static void timer_1_init_gpio(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
+    // Enable clocks
     __HAL_RCC_GPIOC_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOA_CLK_ENABLE();
 
-    /**TIM1 GPIO Configuration
-    PC13     ------> TIM1_CH1N
-    PB0     ------> TIM1_CH2N
-    PB1     ------> TIM1_CH3N
-    PA8     ------> TIM1_CH1
-    PA9     ------> TIM1_CH2
-    PA10     ------> TIM1_CH3
-    */
-
-    // TODO: Check out that pins!
-
-    GPIO_InitStruct.Pin         = GPIO_PIN_13;
+    // Timer 1 Channel 1 - Positive PWM
+    GPIO_InitStruct.Pin         = TIM1_CH1__PIN;
     GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull        = GPIO_NOPULL;
-    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate   = GPIO_AF4_TIM1;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate   = TIM1_CH1__AF;
+    HAL_GPIO_Init( TIM1_CH1__PORT, &GPIO_InitStruct );
 
-    GPIO_InitStruct.Pin         = GPIO_PIN_0|GPIO_PIN_1;
+    // Timer 1 Channel 1 - Negative PWM
+    GPIO_InitStruct.Pin         = TIM1_CH1N__PIN;
     GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull        = GPIO_NOPULL;
-    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate   = GPIO_AF6_TIM1;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate   = TIM1_CH1N__AF;
+    HAL_GPIO_Init( TIM1_CH1N__PORT, &GPIO_InitStruct );
 
-    GPIO_InitStruct.Pin         = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10;
+    // Timer 1 Channel 2 - Positive PWM
+    GPIO_InitStruct.Pin         = TIM1_CH2__PIN;
     GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull        = GPIO_NOPULL;
-    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitStruct.Alternate   = GPIO_AF6_TIM1;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate   = TIM1_CH2__AF;
+    HAL_GPIO_Init( TIM1_CH2__PORT, &GPIO_InitStruct );
 
+    // Timer 1 Channel 2 - Negative PWM
+    GPIO_InitStruct.Pin         = TIM1_CH2N__PIN;
+    GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull        = GPIO_NOPULL;
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate   = TIM1_CH2N__AF;
+    HAL_GPIO_Init( TIM1_CH2N__PORT, &GPIO_InitStruct );
 
+    // Timer 1 Channel 3 - Positive PWM
+    GPIO_InitStruct.Pin         = TIM1_CH3__PIN;
+    GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull        = GPIO_NOPULL;
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate   = TIM1_CH3__AF;
+    HAL_GPIO_Init( TIM1_CH3__PORT, &GPIO_InitStruct );
+
+    // Timer 1 Channel 3 - Negative PWM
+    GPIO_InitStruct.Pin         = TIM1_CH3N__PIN;
+    GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull        = GPIO_NOPULL;
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate   = TIM1_CH3N__AF;
+    HAL_GPIO_Init( TIM1_CH3N__PORT, &GPIO_InitStruct );
 }
 
 
@@ -764,7 +780,7 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     timer_status_t status = eTIMER_OK;
 
     TIM_ClockConfigTypeDef          sClockSourceConfig      = {0};
-    //TIM_MasterConfigTypeDef         sMasterConfig           = {0};
+    TIM_MasterConfigTypeDef         sMasterConfig           = {0};
     TIM_OC_InitTypeDef              sConfigOC               = {0};
     TIM_BreakDeadTimeConfigTypeDef  sBreakDeadTimeConfig    = {0};
 
@@ -808,13 +824,13 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 
 
     // TODO: This is important for ADC triggering
-/*    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
     sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
     sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&gh_tim1, &sMasterConfig) != HAL_OK)
     {
-      Error_Handler();
-    }*/
+        status = eTIMER_ERROR;
+    }
 
 
     sConfigOC.OCMode        = TIM_OCMODE_PWM1;
@@ -864,6 +880,20 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     {
         status = eTIMER_ERROR;
     }
+
+    //HAL_TIM_Base_Start
+    HAL_TIM_Base_Start( &gh_tim1 );
+
+    HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_1 );
+    HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_2 );
+    HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_3 );
+    HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_1 );
+    HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_2 );
+    HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_3 );
+
+    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_1, 0x100 );
+    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_2, 0x200 );
+    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_3, 0x300 );
 
     return status;
 }
