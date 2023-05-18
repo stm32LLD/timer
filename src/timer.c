@@ -24,18 +24,8 @@
 #include <stdbool.h>
 
 #include "timer.h"
+#include "../../timer_cfg.h"
 
-#ifdef STM32L4
-    #include "stm32l4xx_hal.h"
-#endif
-
-#ifdef STM32G0
-    #include "stm32g0xx_hal.h"
-#endif
-
-#ifdef STM32H7
-    #include "stm32h7xx_hal.h"
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // Definitions
@@ -714,6 +704,182 @@ timer_status_t timer_cnt_get(const timer_inst_t tim_inst, uint32_t * const p_cou
 
     return status;
 }
+
+
+
+
+static TIM_HandleTypeDef gh_tim1 = {0};
+
+
+
+
+static void timer_1_init_gpio(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    /**TIM1 GPIO Configuration
+    PC13     ------> TIM1_CH1N
+    PB0     ------> TIM1_CH2N
+    PB1     ------> TIM1_CH3N
+    PA8     ------> TIM1_CH1
+    PA9     ------> TIM1_CH2
+    PA10     ------> TIM1_CH3
+    */
+
+    // TODO: Check out that pins!
+
+    GPIO_InitStruct.Pin         = GPIO_PIN_13;
+    GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull        = GPIO_NOPULL;
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate   = GPIO_AF4_TIM1;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin         = GPIO_PIN_0|GPIO_PIN_1;
+    GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull        = GPIO_NOPULL;
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate   = GPIO_AF6_TIM1;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin         = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10;
+    GPIO_InitStruct.Mode        = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull        = GPIO_NOPULL;
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate   = GPIO_AF6_TIM1;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+
+}
+
+
+
+
+timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
+{
+    timer_status_t status = eTIMER_OK;
+
+    TIM_ClockConfigTypeDef          sClockSourceConfig      = {0};
+    //TIM_MasterConfigTypeDef         sMasterConfig           = {0};
+    TIM_OC_InitTypeDef              sConfigOC               = {0};
+    TIM_BreakDeadTimeConfigTypeDef  sBreakDeadTimeConfig    = {0};
+
+    // Init Timer PWM gpios
+    timer_1_init_gpio();
+
+    // Enable timer clock
+    __HAL_RCC_TIM1_CLK_ENABLE();
+
+
+    // Input clock is 150 MHz
+    // Frequency times 2 as it is up/down counter
+    const uint32_t period = (uint32_t)( 150e6 / ( 2 * p_cfg->freq ));
+
+    gh_tim1.Instance                  = TIM1;
+    gh_tim1.Init.Prescaler            = 0;
+    gh_tim1.Init.CounterMode          = TIM_COUNTERMODE_CENTERALIGNED1;
+    gh_tim1.Init.Period               = period;
+    gh_tim1.Init.ClockDivision        = TIM_CLOCKDIVISION_DIV1;
+    gh_tim1.Init.RepetitionCounter    = 0;
+    gh_tim1.Init.AutoReloadPreload    = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+    if ( HAL_OK != HAL_TIM_Base_Init( &gh_tim1 ))
+    {
+        status = eTIMER_ERROR;
+    }
+
+
+    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+
+    if ( HAL_OK != HAL_TIM_ConfigClockSource( &gh_tim1, &sClockSourceConfig ))
+    {
+        status = eTIMER_ERROR;
+    }
+
+
+    if ( HAL_OK != HAL_TIM_PWM_Init( &gh_tim1 ))
+    {
+        status = eTIMER_ERROR;
+    }
+
+
+    // TODO: This is important for ADC triggering
+/*    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
+    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+    if (HAL_TIMEx_MasterConfigSynchronization(&gh_tim1, &sMasterConfig) != HAL_OK)
+    {
+      Error_Handler();
+    }*/
+
+
+    sConfigOC.OCMode        = TIM_OCMODE_PWM1;
+    sConfigOC.Pulse         = 0;
+    sConfigOC.OCPolarity    = TIM_OCPOLARITY_HIGH;
+    sConfigOC.OCNPolarity   = TIM_OCNPOLARITY_HIGH;
+    sConfigOC.OCFastMode    = TIM_OCFAST_DISABLE;
+    sConfigOC.OCIdleState   = TIM_OCIDLESTATE_RESET;
+    sConfigOC.OCNIdleState  = TIM_OCNIDLESTATE_RESET;
+
+    if ( HAL_OK != HAL_TIM_PWM_ConfigChannel( &gh_tim1, &sConfigOC, TIM_CHANNEL_1 ))
+    {
+        status = eTIMER_ERROR;
+    }
+
+    if ( HAL_OK != HAL_TIM_PWM_ConfigChannel( &gh_tim1, &sConfigOC, TIM_CHANNEL_2 ))
+    {
+        status = eTIMER_ERROR;
+    }
+
+    if ( HAL_OK != HAL_TIM_PWM_ConfigChannel( &gh_tim1, &sConfigOC, TIM_CHANNEL_3 ))
+    {
+      status = eTIMER_ERROR;
+    }
+
+
+    // Calculate deadtime
+    // p_cfg->deadtime [us] * timer_freq [MHz]
+    const uint32_t deadtime = (uint32_t) ( p_cfg->deadtime * 150e6 );
+
+    sBreakDeadTimeConfig.OffStateRunMode    = TIM_OSSR_DISABLE;
+    sBreakDeadTimeConfig.OffStateIDLEMode   = TIM_OSSI_DISABLE;
+    sBreakDeadTimeConfig.LockLevel          = TIM_LOCKLEVEL_OFF;
+    sBreakDeadTimeConfig.DeadTime           = deadtime;
+    sBreakDeadTimeConfig.BreakState         = TIM_BREAK_DISABLE;
+    sBreakDeadTimeConfig.BreakPolarity      = TIM_BREAKPOLARITY_HIGH;
+    sBreakDeadTimeConfig.BreakFilter        = 0;
+    sBreakDeadTimeConfig.BreakAFMode        = TIM_BREAK_AFMODE_INPUT;
+    sBreakDeadTimeConfig.Break2State        = TIM_BREAK2_DISABLE;
+    sBreakDeadTimeConfig.Break2Polarity     = TIM_BREAK2POLARITY_HIGH;
+    sBreakDeadTimeConfig.Break2Filter       = 0;
+    sBreakDeadTimeConfig.Break2AFMode       = TIM_BREAK_AFMODE_INPUT;
+    sBreakDeadTimeConfig.AutomaticOutput    = TIM_AUTOMATICOUTPUT_DISABLE;
+
+
+    if ( HAL_OK != HAL_TIMEx_ConfigBreakDeadTime( &gh_tim1, &sBreakDeadTimeConfig ))
+    {
+        status = eTIMER_ERROR;
+    }
+
+    return status;
+}
+
+timer_status_t timer_1_set_pwm(const float32_t duty_u, const float32_t duty_v, const float32_t duty_w)
+{
+    timer_status_t status = eTIMER_OK;
+
+    (void) duty_u;
+    (void) duty_v;
+    (void) duty_w;
+
+    return status;
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /**

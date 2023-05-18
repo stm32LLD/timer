@@ -81,6 +81,18 @@ timer_status_t timer_read_pwm      (const timer_ch_t tim_ch, float32_t * const p
 timer_status_t timer_start_stopwatch(const timer_inst_t tim_inst, const float32_t expire_time, pf_timer_cb cb);
 
 
+typedef struct
+{
+    float32_t freq;         /**<Switching frequency in Hz */
+    float32_t toff_min;     /**<Minimum OFF pulse time in us */
+    float32_t deadtime;     /**<Dead time in us */
+} timer_1_cfg_t;
+
+
+timer_status_t timer_1_init     (const timer_1_cfg_t * const p_cfg);
+timer_status_t timer_1_set_pwm  (const float32_t duty_u, const float32_t duty_v, const float32_t duty_w);
+
+
 #endif // __TIMER_H
 
 ////////////////////////////////////////////////////////////////////////////////
