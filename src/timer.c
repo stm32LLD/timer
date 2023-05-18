@@ -793,13 +793,13 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 
     // Input clock is 150 MHz
     // Frequency times 2 as it is up/down counter
-    const uint32_t period = (uint32_t)( 150e6 / ( 2 * p_cfg->freq ));
+    const uint32_t period = (uint32_t)(( 150e6 / 31 ) / ( 2 * p_cfg->freq ));
 
     gh_tim1.Instance                  = TIM1;
-    gh_tim1.Init.Prescaler            = 0;
+    gh_tim1.Init.Prescaler            = 30;
     gh_tim1.Init.CounterMode          = TIM_COUNTERMODE_CENTERALIGNED1;
     gh_tim1.Init.Period               = period;
-    gh_tim1.Init.ClockDivision        = TIM_CLOCKDIVISION_DIV1;
+    gh_tim1.Init.ClockDivision        = TIM_CLOCKDIVISION_DIV2;
     gh_tim1.Init.RepetitionCounter    = 0;
     gh_tim1.Init.AutoReloadPreload    = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
@@ -859,7 +859,33 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 
     // Calculate deadtime
     // p_cfg->deadtime [us] * timer_freq [MHz]
-    const uint32_t deadtime = (uint32_t) ( p_cfg->deadtime * 150e6 );
+    //const uint32_t deadtime = (uint32_t) ( p_cfg->deadtime / 0.2 );
+
+    uint32_t deadtime = 0;
+
+    if ( p_cfg->deadtime <= 1.68f )
+    {
+        deadtime = (uint32_t) ( p_cfg->deadtime / 0.013f ) & 0x7FU;
+    }
+    else if ( p_cfg->deadtime <= 3.40f )
+    {
+        deadtime = (uint32_t) (( p_cfg->deadtime - 1.68f ) / 0.028f ) & 0x3FU;
+        deadtime |= 0x80;
+    }
+    else if ( p_cfg->deadtime <= 6.8f )
+    {
+        deadtime = (uint32_t) ( p_cfg->deadtime / 0.104f ) & 0x1FU;
+        deadtime |= 0xC0;
+    }
+    else if ( p_cfg->deadtime <= 12.0f )
+    {
+        deadtime = (uint32_t) ( p_cfg->deadtime / 0.208f ) & 0x1FU;
+        deadtime |= 0xE0;
+    }
+    else
+    {
+        status = eTIMER_ERROR;
+    }
 
     sBreakDeadTimeConfig.OffStateRunMode    = TIM_OSSR_DISABLE;
     sBreakDeadTimeConfig.OffStateIDLEMode   = TIM_OSSI_DISABLE;
@@ -881,6 +907,8 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
         status = eTIMER_ERROR;
     }
 
+    //HAL_TIMEx_EnableDeadTimePreload( &gh_tim1 );
+
     //HAL_TIM_Base_Start
     HAL_TIM_Base_Start( &gh_tim1 );
 
@@ -891,7 +919,7 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_2 );
     HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_3 );
 
-    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_1, 0x100 );
+    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_1, 0x300 );
     __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_2, 0x200 );
     __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_3, 0x300 );
 
