@@ -905,7 +905,7 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 
 
     // TODO: This is important for ADC triggering
-    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
     sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
     sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&gh_tim1, &sMasterConfig) != HAL_OK)
