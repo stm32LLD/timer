@@ -710,6 +710,7 @@ timer_status_t timer_cnt_get(const timer_inst_t tim_inst, uint32_t * const p_cou
 
 #include "config/pin_mapper.h"
 
+
 /**
  *  Timer 1 Instance
  */
@@ -975,13 +976,15 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 /*!
 * @brief        Set duty cycle
 *
+*   Execution time (@150MHz CPU clock): TODO:
+*
 * @param[in]    duty_u      - Duty cycle for phase U. Valid range: 0-1
 * @param[in]    duty_v      - Duty cycle for phase V. Valid range: 0-1
 * @param[in]    duty_w      - Duty cycle for phase W. Valid range: 0-1
 * @return       status      - Status of operation
 */
 ////////////////////////////////////////////////////////////////////////////////
-timer_status_t timer_1_set_pwm(const float32_t duty_u, const float32_t duty_v, const float32_t duty_w)
+__attribute__((optimize("Ofast"))) timer_status_t timer_1_set_pwm(const float32_t duty_u, const float32_t duty_v, const float32_t duty_w)
 {
     timer_status_t status = eTIMER_OK;
 
