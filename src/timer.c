@@ -708,12 +708,21 @@ timer_status_t timer_cnt_get(const timer_inst_t tim_inst, uint32_t * const p_cou
 
 
 
+#include "config/pin_mapper.h"
+
+/**
+ *  Timer 1 Instance
+ */
 static TIM_HandleTypeDef gh_tim1 = {0};
 
 
-
-#include "config/pin_mapper.h"
-
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Initialized timer 1 pins
+*
+* @return       void
+*/
+////////////////////////////////////////////////////////////////////////////////
 static void timer_1_init_gpio(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -772,9 +781,81 @@ static void timer_1_init_gpio(void)
     HAL_GPIO_Init( TIM1_CH3N__PORT, &GPIO_InitStruct );
 }
 
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Calculate dead time
+*
+* @param[in]    deadtime_us - Deadtime in us
+* @return       deadtime    - Deadtime in raw form for DTG register
+*/
+////////////////////////////////////////////////////////////////////////////////
+static uint32_t timer_1_calc_deadtime(const float32_t deadtime_us)
+{
+    uint32_t deadtime = 0U;
 
+    if ( deadtime_us <= 1.68f )
+    {
+        deadtime = (uint32_t) ( deadtime_us / 0.013f ) & 0x7FU;
+    }
+    else if ( deadtime_us <= 3.40f )
+    {
+        deadtime = (uint32_t) (( deadtime_us - 1.68f ) / 0.028f ) & 0x3FU;
+        deadtime |= 0x80;
+    }
+    else if ( deadtime_us <= 6.8f )
+    {
+        deadtime = (uint32_t) ( deadtime_us / 0.104f ) & 0x1FU;
+        deadtime |= 0xC0;
+    }
+    else if ( deadtime_us <= 12.0f )
+    {
+        deadtime = (uint32_t) ( deadtime_us / 0.208f ) & 0x1FU;
+        deadtime |= 0xE0;
+    }
+    else
+    {
+        // No actions...
+    }
 
+    return deadtime;
+}
 
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Limit duty cycle
+*
+* @param[in]    duty_in     - Inputed duty cycle
+* @return       duty_out    - Outputed limited duty cycle
+*/
+////////////////////////////////////////////////////////////////////////////////
+static inline float32_t timer_1_limit_duty(const float32_t duty_in)
+{
+    float32_t duty_out = 0.0f;
+
+    if ( duty_in > 1.0f )
+    {
+        duty_out = 1.0f;
+    }
+    else if ( duty_in < 0.0f )
+    {
+        duty_out = 0.0f;
+    }
+    else
+    {
+        duty_out = duty_in;
+    }
+
+    return duty_out;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Initialize timer 1 for motor control and ADC triggering
+*
+* @param[in]    p_cfg       - Timer configurations
+* @return       status      - Status of operation
+*/
+////////////////////////////////////////////////////////////////////////////////
 timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 {
     timer_status_t status = eTIMER_OK;
@@ -790,10 +871,9 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     // Enable timer clock
     __HAL_RCC_TIM1_CLK_ENABLE();
 
-
     // Input clock is 150 MHz
     // Frequency times 2 as it is up/down counter
-    const uint32_t period = (uint32_t)(( 150e6 / 1 ) / ( 2 * p_cfg->freq ));
+    const uint32_t period = (uint32_t)( 150e6 / ( 2 * p_cfg->freq ));
 
     gh_tim1.Instance                  = TIM1;
     gh_tim1.Init.Prescaler            = 0;
@@ -808,7 +888,7 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
         status = eTIMER_ERROR;
     }
 
-
+    // Set internal clock source
     sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 
     if ( HAL_OK != HAL_TIM_ConfigClockSource( &gh_tim1, &sClockSourceConfig ))
@@ -832,7 +912,7 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
         status = eTIMER_ERROR;
     }
 
-
+    // Setup channels
     sConfigOC.OCMode        = TIM_OCMODE_PWM1;
     sConfigOC.Pulse         = 0;
     sConfigOC.OCPolarity    = TIM_OCPOLARITY_HIGH;
@@ -856,41 +936,11 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
       status = eTIMER_ERROR;
     }
 
-
-    // Calculate deadtime
-    // p_cfg->deadtime [us] * timer_freq [MHz]
-    //const uint32_t deadtime = (uint32_t) ( p_cfg->deadtime / 0.2 );
-
-    uint32_t deadtime = 0;
-
-    if ( p_cfg->deadtime <= 1.68f )
-    {
-        deadtime = (uint32_t) ( p_cfg->deadtime / 0.013f ) & 0x7FU;
-    }
-    else if ( p_cfg->deadtime <= 3.40f )
-    {
-        deadtime = (uint32_t) (( p_cfg->deadtime - 1.68f ) / 0.028f ) & 0x3FU;
-        deadtime |= 0x80;
-    }
-    else if ( p_cfg->deadtime <= 6.8f )
-    {
-        deadtime = (uint32_t) ( p_cfg->deadtime / 0.104f ) & 0x1FU;
-        deadtime |= 0xC0;
-    }
-    else if ( p_cfg->deadtime <= 12.0f )
-    {
-        deadtime = (uint32_t) ( p_cfg->deadtime / 0.208f ) & 0x1FU;
-        deadtime |= 0xE0;
-    }
-    else
-    {
-        status = eTIMER_ERROR;
-    }
-
+    // Setup break & deadtime
     sBreakDeadTimeConfig.OffStateRunMode    = TIM_OSSR_DISABLE;
     sBreakDeadTimeConfig.OffStateIDLEMode   = TIM_OSSI_DISABLE;
     sBreakDeadTimeConfig.LockLevel          = TIM_LOCKLEVEL_OFF;
-    sBreakDeadTimeConfig.DeadTime           = deadtime;
+    sBreakDeadTimeConfig.DeadTime           = timer_1_calc_deadtime( p_cfg->deadtime );
     sBreakDeadTimeConfig.BreakState         = TIM_BREAK_DISABLE;
     sBreakDeadTimeConfig.BreakPolarity      = TIM_BREAKPOLARITY_HIGH;
     sBreakDeadTimeConfig.BreakFilter        = 0;
@@ -901,17 +951,13 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     sBreakDeadTimeConfig.Break2AFMode       = TIM_BREAK_AFMODE_INPUT;
     sBreakDeadTimeConfig.AutomaticOutput    = TIM_AUTOMATICOUTPUT_DISABLE;
 
-
     if ( HAL_OK != HAL_TIMEx_ConfigBreakDeadTime( &gh_tim1, &sBreakDeadTimeConfig ))
     {
         status = eTIMER_ERROR;
     }
 
-    //HAL_TIMEx_EnableDeadTimePreload( &gh_tim1 );
-
-    //HAL_TIM_Base_Start
+    // Start timer
     HAL_TIM_Base_Start( &gh_tim1 );
-
     HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_1 );
     HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_2 );
     HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_3 );
@@ -919,25 +965,50 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_2 );
     HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_3 );
 
-    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_1, 0x300 );
-    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_2, 0x200 );
-    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_3, 0x300 );
+    // Set initial duty
+    (void) timer_1_set_pwm( 0.0f, 0.0f, 0.0f );
 
     return status;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Set duty cycle
+*
+* @param[in]    duty_u      - Duty cycle for phase U. Valid range: 0-1
+* @param[in]    duty_v      - Duty cycle for phase V. Valid range: 0-1
+* @param[in]    duty_w      - Duty cycle for phase W. Valid range: 0-1
+* @return       status      - Status of operation
+*/
+////////////////////////////////////////////////////////////////////////////////
 timer_status_t timer_1_set_pwm(const float32_t duty_u, const float32_t duty_v, const float32_t duty_w)
 {
     timer_status_t status = eTIMER_OK;
 
-    (void) duty_u;
-    (void) duty_v;
-    (void) duty_w;
+    TIMER_ASSERT(( duty_u >= 0.0f ) && ( duty_u <= 1.0f ))
+    TIMER_ASSERT(( duty_v >= 0.0f ) && ( duty_v <= 1.0f ))
+    TIMER_ASSERT(( duty_w >= 0.0f ) && ( duty_w <= 1.0f ))
+
+    // Get period
+    const uint32_t period = (uint32_t) __HAL_TIM_GET_AUTORELOAD( &gh_tim1 );
+
+    // Limit duty cycles
+    const float32_t duty_u_lim = timer_1_limit_duty( duty_u );
+    const float32_t duty_v_lim = timer_1_limit_duty( duty_v );
+    const float32_t duty_w_lim = timer_1_limit_duty( duty_w );
+
+    // Calculate compare
+    const uint32_t ccr1 = (uint32_t)( duty_u_lim * (float32_t) period );
+    const uint32_t ccr2 = (uint32_t)( duty_v_lim * (float32_t) period );
+    const uint32_t ccr3 = (uint32_t)( duty_w_lim * (float32_t) period );
+
+    // Set compare
+    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_1, ccr1 );
+    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_2, ccr2 );
+    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_3, ccr3 );
 
     return status;
 }
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 /**
