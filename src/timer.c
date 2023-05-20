@@ -881,7 +881,7 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     gh_tim1.Init.CounterMode          = TIM_COUNTERMODE_CENTERALIGNED1;
     gh_tim1.Init.Period               = period;
     gh_tim1.Init.ClockDivision        = TIM_CLOCKDIVISION_DIV2;
-    gh_tim1.Init.RepetitionCounter    = 1;
+    gh_tim1.Init.RepetitionCounter    = 0;
     gh_tim1.Init.AutoReloadPreload    = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
     if ( HAL_OK != HAL_TIM_Base_Init( &gh_tim1 ))
@@ -897,16 +897,15 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
         status = eTIMER_ERROR;
     }
 
-
+    // Init PWM
     if ( HAL_OK != HAL_TIM_PWM_Init( &gh_tim1 ))
     {
         status = eTIMER_ERROR;
     }
 
-
-    // TODO: This is important for ADC triggering
+    // Output trigger to ADC
     sMasterConfig.MasterOutputTrigger   = TIM_TRGO_RESET;
-    sMasterConfig.MasterOutputTrigger2  = TIM_TRGO2_OC4REF;
+    sMasterConfig.MasterOutputTrigger2  = TIM_TRGO2_OC4REF;     // NOTE: Use channel 4 for trigger output!
     sMasterConfig.MasterSlaveMode       = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&gh_tim1, &sMasterConfig) != HAL_OK)
     {
@@ -922,22 +921,25 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     sConfigOC.OCIdleState   = TIM_OCIDLESTATE_RESET;
     sConfigOC.OCNIdleState  = TIM_OCNIDLESTATE_RESET;
 
+    // CHANNEL 1 - Motor PWM Phase A
     if ( HAL_OK != HAL_TIM_PWM_ConfigChannel( &gh_tim1, &sConfigOC, TIM_CHANNEL_1 ))
     {
         status = eTIMER_ERROR;
     }
 
+    // CHANNEL 2 - Motor PWM Phase B
     if ( HAL_OK != HAL_TIM_PWM_ConfigChannel( &gh_tim1, &sConfigOC, TIM_CHANNEL_2 ))
     {
         status = eTIMER_ERROR;
     }
 
+    // CHANNEL 3 - Motor PWM Phase C
     if ( HAL_OK != HAL_TIM_PWM_ConfigChannel( &gh_tim1, &sConfigOC, TIM_CHANNEL_3 ))
     {
       status = eTIMER_ERROR;
     }
 
-    // Channel 4 is used for ADC triggering!
+    // CHANNEL 4 - ADC triggering
     if ( HAL_OK != HAL_TIM_PWM_ConfigChannel( &gh_tim1, &sConfigOC, TIM_CHANNEL_4 ))
     {
         status = eTIMER_ERROR;
@@ -971,17 +973,16 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_1 );
     HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_2 );
     HAL_TIMEx_PWMN_Start( &gh_tim1, TIM_CHANNEL_3 );
+    HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_4 );
 
     // Set initial duty
     (void) timer_1_set_pwm( 0.0f, 0.0f, 0.0f );
-
-
 
     // Calculate sample delay!
     // NOTE: Valid only for timer input clock frequency of 150 MHz!
     const uint32_t ccr4 = (uint32_t) ( period - ( p_cfg->sample_delay * 150.0f ) - 1U );
 
-    HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_4 );
+    // Set channel 4 duty
     __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_4, ccr4 );
 
     return status;
