@@ -980,7 +980,7 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 
     // Calculate sample delay!
     // NOTE: Valid only for timer input clock frequency of 150 MHz!
-    const uint32_t ccr4 = (uint32_t) ( period - ( p_cfg->sample_delay * 150.0f ) - 1U );
+    const uint32_t ccr4 = (uint32_t) (( p_cfg->sample_delay * 150.0f ) + 1U );
 
     // Set channel 4 duty
     __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_4, ccr4 );
