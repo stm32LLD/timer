@@ -905,9 +905,9 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
 
 
     // TODO: This is important for ADC triggering
-    sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
-    sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_OC4REF;
-    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+    sMasterConfig.MasterOutputTrigger   = TIM_TRGO_RESET;
+    sMasterConfig.MasterOutputTrigger2  = TIM_TRGO2_OC4REF;
+    sMasterConfig.MasterSlaveMode       = TIM_MASTERSLAVEMODE_DISABLE;
     if (HAL_TIMEx_MasterConfigSynchronization(&gh_tim1, &sMasterConfig) != HAL_OK)
     {
         status = eTIMER_ERROR;
@@ -976,11 +976,13 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     (void) timer_1_set_pwm( 0.0f, 0.0f, 0.0f );
 
 
-    // TODO: Calculate sample delay!
-    //const uint32_t ccr4 = ( p_cfg->sample_delay );
+
+    // Calculate sample delay!
+    // NOTE: Valid only for timer input clock frequency of 150 MHz!
+    const uint32_t ccr4 = (uint32_t) ( period - ( p_cfg->sample_delay * 150.0f ) - 1U );
 
     HAL_TIM_PWM_Start( &gh_tim1, TIM_CHANNEL_4 );
-    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_4, 0x10 );
+    __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_4, ccr4 );
 
     return status;
 }
