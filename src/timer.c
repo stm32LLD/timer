@@ -881,7 +881,7 @@ timer_status_t timer_1_init(const timer_1_cfg_t * const p_cfg)
     gh_tim1.Init.CounterMode          = TIM_COUNTERMODE_CENTERALIGNED1;
     gh_tim1.Init.Period               = period;
     gh_tim1.Init.ClockDivision        = TIM_CLOCKDIVISION_DIV2;
-    gh_tim1.Init.RepetitionCounter    = 0;
+    gh_tim1.Init.RepetitionCounter    = 1;
     gh_tim1.Init.AutoReloadPreload    = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
     if ( HAL_OK != HAL_TIM_Base_Init( &gh_tim1 ))
