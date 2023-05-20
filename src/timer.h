@@ -86,6 +86,7 @@ typedef struct
     float32_t freq;         /**<Switching frequency in Hz */
     float32_t toff_min;     /**<Minimum OFF pulse time in us */
     float32_t deadtime;     /**<Dead time in us */
+    float32_t sample_delay; /**<ADC trigged delay from low PWM center cycle */
 } timer_1_cfg_t;
 
 
