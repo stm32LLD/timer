@@ -92,6 +92,7 @@ typedef struct
 
 timer_status_t timer_1_init     (const timer_1_cfg_t * const p_cfg);
 timer_status_t timer_1_set_pwm  (const float32_t duty_u, const float32_t duty_v, const float32_t duty_w);
+timer_status_t timer_1_pwm_en   (const bool en);
 
 
 #endif // __TIMER_H

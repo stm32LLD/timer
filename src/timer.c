@@ -719,7 +719,7 @@ static TIM_HandleTypeDef gh_tim1 = {0};
 
 ////////////////////////////////////////////////////////////////////////////////
 /*!
-* @brief        Initialized timer 1 pins
+* @brief        Initialize timer 1 pins
 *
 * @return       void
 */
@@ -780,6 +780,35 @@ static void timer_1_init_gpio(void)
     GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_HIGH;
     GPIO_InitStruct.Alternate   = TIM1_CH3N__AF;
     HAL_GPIO_Init( TIM1_CH3N__PORT, &GPIO_InitStruct );
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        De-Initialize timer 1 pins
+*
+* @return       void
+*/
+////////////////////////////////////////////////////////////////////////////////
+static void timer_1_deinit_gpio(void)
+{
+    // Timer 1 Channel 1 - Positive PWM
+    HAL_GPIO_DeInit( TIM1_CH1__PORT, TIM1_CH1__PIN );
+
+    // Timer 1 Channel 1 - Negative PWM
+
+    HAL_GPIO_DeInit( TIM1_CH1N__PORT, TIM1_CH1N__PIN );
+
+    // Timer 1 Channel 2 - Positive PWM
+    HAL_GPIO_DeInit( TIM1_CH2__PORT, TIM1_CH2__PIN );
+
+    // Timer 1 Channel 2 - Negative PWM
+    HAL_GPIO_DeInit( TIM1_CH2N__PORT, TIM1_CH2N__PIN );
+
+    // Timer 1 Channel 3 - Positive PWM
+    HAL_GPIO_DeInit( TIM1_CH3__PORT, TIM1_CH3__PIN );
+
+    // Timer 1 Channel 3 - Negative PWM
+    HAL_GPIO_DeInit( TIM1_CH3N__PORT, TIM1_CH3N__PIN );
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1025,6 +1054,30 @@ __attribute__((optimize("Ofast"))) timer_status_t timer_1_set_pwm(const float32_
     __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_1, ccr1 );
     __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_2, ccr2 );
     __HAL_TIM_SET_COMPARE( &gh_tim1, TIM_CHANNEL_3, ccr3 );
+
+    return status;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Enable/Disable pwm pins
+*
+* @param[in]    en      - Enable/Disable PWM pins
+* @return       status  - Status of operation
+*/
+////////////////////////////////////////////////////////////////////////////////
+timer_status_t timer_1_pwm_en(const bool en)
+{
+    timer_status_t status = eTIMER_OK;
+
+    if ( true == en )
+    {
+        timer_1_init_gpio();
+    }
+    else
+    {
+        timer_1_deinit_gpio();
+    }
 
     return status;
 }
