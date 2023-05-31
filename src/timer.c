@@ -709,6 +709,7 @@ timer_status_t timer_cnt_get(const timer_inst_t tim_inst, uint32_t * const p_cou
 
 
 #include "config/pin_mapper.h"
+#include "drivers/peripheral/gpio/gpio/src/gpio.h"
 
 
 /**
@@ -1081,6 +1082,134 @@ timer_status_t timer_1_pwm_en(const bool en)
 
     return status;
 }
+
+
+
+
+/**
+ *  Timer 4 Instance
+ */
+static TIM_HandleTypeDef gh_tim4 = {0};
+
+static bool gb_tim4_is_init = false;
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Initialize timer 4 pins
+*
+* @return       void
+*/
+////////////////////////////////////////////////////////////////////////////////
+static void timer_4_init_gpio(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+    // Enable clocks
+    gpio_enable_port_clock( H1__PORT );
+    gpio_enable_port_clock( H2__PORT );
+
+    // Init H1 pin
+    GPIO_InitStruct.Pin         = H1__PIN;
+    GPIO_InitStruct.Mode        = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull        = H1__PULL;
+    GPIO_InitStruct.Speed       = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Alternate   = H1__AF;
+    HAL_GPIO_Init(H1__PORT, &GPIO_InitStruct);
+
+    // Init H2 pin
+    GPIO_InitStruct.Pin         = H2__PIN;
+    GPIO_InitStruct.Pull        = H2__PULL;
+    GPIO_InitStruct.Alternate   = H2__AF;
+    HAL_GPIO_Init(H2__PORT, &GPIO_InitStruct);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Initialize timer 4 as encoder reading
+*
+* @return       status - Status of initialization
+*/
+////////////////////////////////////////////////////////////////////////////////
+timer_status_t timer_4_init(void)
+{
+    timer_status_t          status  = eTIMER_OK;
+    TIM_Encoder_InitTypeDef sConfig = {0};
+
+    if ( false == gb_tim4_is_init )
+    {
+        // Init Timer PWM gpios
+        timer_4_init_gpio();
+
+        // Enable timer clock
+        __HAL_RCC_TIM4_CLK_ENABLE();
+
+        // Configure Timer
+        gh_tim4.Instance                = TIM4;
+        gh_tim4.Init.Prescaler          = 0;
+        gh_tim4.Init.CounterMode        = TIM_COUNTERMODE_UP;
+        gh_tim4.Init.Period             = 3;
+        gh_tim4.Init.ClockDivision      = TIM_CLOCKDIVISION_DIV1;
+        gh_tim4.Init.AutoReloadPreload  = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+        // Configure encoder timer mode
+        sConfig.EncoderMode             = TIM_ENCODERMODE_TI12;
+        sConfig.IC1Polarity             = TIM_ICPOLARITY_RISING;
+        sConfig.IC1Selection            = TIM_ICSELECTION_DIRECTTI;
+        sConfig.IC1Prescaler            = TIM_ICPSC_DIV1;
+        sConfig.IC1Filter               = 0;
+        sConfig.IC2Polarity             = TIM_ICPOLARITY_RISING;
+        sConfig.IC2Selection            = TIM_ICSELECTION_DIRECTTI;
+        sConfig.IC2Prescaler            = TIM_ICPSC_DIV1;
+        sConfig.IC2Filter               = 0;
+
+        // Init timer as encoder
+        if ( HAL_OK != HAL_TIM_Encoder_Init( &gh_tim4, &sConfig ))
+        {
+            status = eTIMER_ERROR;
+        }
+        else
+        {
+            gb_tim4_is_init = true;
+
+            // Start Timer
+            HAL_TIM_Encoder_Start( &gh_tim4, TIM_CHANNEL_ALL );
+        }
+    }
+
+    return status;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/*!
+* @brief        Get timer 4 counts
+*
+* @param[out]   p_counter   - Pointer to encoder ticks
+* @return       status      - Status of operation
+*/
+////////////////////////////////////////////////////////////////////////////////
+timer_status_t timer_4_cnt_get(uint32_t * const p_counter)
+{
+    timer_status_t status = eTIMER_OK;
+
+    TIMER_ASSERT( true == gb_tim4_is_init );
+    TIMER_ASSERT( NULL != p_counter );
+
+    if  (   ( true == gb_tim4_is_init )
+        &&  ( NULL != p_counter ))
+    {
+        *p_counter = __HAL_TIM_GET_COUNTER( &gh_tim4 );
+    }
+    else
+    {
+        status = eTIMER_ERROR;
+    }
+
+    return status;
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /**

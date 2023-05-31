@@ -81,6 +81,7 @@ timer_status_t timer_read_pwm      (const timer_ch_t tim_ch, float32_t * const p
 timer_status_t timer_start_stopwatch(const timer_inst_t tim_inst, const float32_t expire_time, pf_timer_cb cb);
 
 
+// TODO: CLean up timer 1 settings
 typedef struct
 {
     float32_t freq;         /**<Switching frequency in Hz */
@@ -93,6 +94,11 @@ typedef struct
 timer_status_t timer_1_init     (const timer_1_cfg_t * const p_cfg);
 timer_status_t timer_1_set_pwm  (const float32_t duty_u, const float32_t duty_v, const float32_t duty_w);
 timer_status_t timer_1_pwm_en   (const bool en);
+
+
+// TODO: CLean up timer 4 settings
+timer_status_t timer_4_init     (void);
+timer_status_t timer_4_cnt_get  (uint32_t * const p_counter);
 
 
 #endif // __TIMER_H
