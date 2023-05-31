@@ -1149,7 +1149,7 @@ timer_status_t timer_4_init(void)
         gh_tim4.Instance                = TIM4;
         gh_tim4.Init.Prescaler          = 0;
         gh_tim4.Init.CounterMode        = TIM_COUNTERMODE_UP;
-        gh_tim4.Init.Period             = 3;
+        gh_tim4.Init.Period             = 9;
         gh_tim4.Init.ClockDivision      = TIM_CLOCKDIVISION_DIV1;
         gh_tim4.Init.AutoReloadPreload  = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
