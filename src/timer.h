@@ -98,7 +98,7 @@ timer_status_t timer_1_pwm_en   (const bool en);
 
 // TODO: CLean up timer 4 settings
 timer_status_t timer_4_init     (void);
-timer_status_t timer_4_cnt_get  (uint32_t * const p_counter);
+timer_status_t timer_4_cnt_get  (uint16_t * const p_counter);
 
 
 #endif // __TIMER_H

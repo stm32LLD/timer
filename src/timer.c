@@ -1149,7 +1149,7 @@ timer_status_t timer_4_init(void)
         gh_tim4.Instance                = TIM4;
         gh_tim4.Init.Prescaler          = 0;
         gh_tim4.Init.CounterMode        = TIM_COUNTERMODE_UP;
-        gh_tim4.Init.Period             = 9;
+        gh_tim4.Init.Period             = 0xFFFF;
         gh_tim4.Init.ClockDivision      = TIM_CLOCKDIVISION_DIV1;
         gh_tim4.Init.AutoReloadPreload  = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
@@ -1189,7 +1189,7 @@ timer_status_t timer_4_init(void)
 * @return       status      - Status of operation
 */
 ////////////////////////////////////////////////////////////////////////////////
-timer_status_t timer_4_cnt_get(uint32_t * const p_counter)
+timer_status_t timer_4_cnt_get(uint16_t * const p_counter)
 {
     timer_status_t status = eTIMER_OK;
 
