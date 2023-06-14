@@ -1129,10 +1129,11 @@ static void timer_4_init_gpio(void)
 /*!
 * @brief        Initialize timer 4 as encoder reading
 *
+* @param[in]    filter - Encoder filter
 * @return       status - Status of initialization
 */
 ////////////////////////////////////////////////////////////////////////////////
-timer_status_t timer_4_init(void)
+timer_status_t timer_4_init(const uint8_t filter)
 {
     timer_status_t          status  = eTIMER_OK;
     TIM_Encoder_InitTypeDef sConfig = {0};
@@ -1158,11 +1159,11 @@ timer_status_t timer_4_init(void)
         sConfig.IC1Polarity             = TIM_ICPOLARITY_RISING;
         sConfig.IC1Selection            = TIM_ICSELECTION_DIRECTTI;
         sConfig.IC1Prescaler            = TIM_ICPSC_DIV1;
-        sConfig.IC1Filter               = 0;
+        sConfig.IC1Filter               = filter;
         sConfig.IC2Polarity             = TIM_ICPOLARITY_RISING;
         sConfig.IC2Selection            = TIM_ICSELECTION_DIRECTTI;
         sConfig.IC2Prescaler            = TIM_ICPSC_DIV1;
-        sConfig.IC2Filter               = 0;
+        sConfig.IC2Filter               = filter;
 
         // Init timer as encoder
         if ( HAL_OK != HAL_TIM_Encoder_Init( &gh_tim4, &sConfig ))
